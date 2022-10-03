@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"time"
+
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	auth "github.com/microsoft/kiota-authentication-azure-go"
@@ -15,7 +16,6 @@ import (
 	"github.com/microsoftgraph/msgraph-sdk-go/me/mailfolders/item/messages"
 	"github.com/microsoftgraph/msgraph-sdk-go/me/sendmail"
 	"github.com/microsoftgraph/msgraph-sdk-go/models"
-	"github.com/microsoftgraph/msgraph-sdk-go/users"
 )
 
 type Client struct {
@@ -23,13 +23,12 @@ type Client struct {
 	userClient             *msgraphsdk.GraphServiceClient
 	graphUserScopes        []string
 	clientSecretCredential *azidentity.ClientSecretCredential
-	appClient              *msgraphsdk.GraphServiceClient
 }
 
 func NewClient() *Client {
-	g := &Client{}
-	g.InitializeClient()
-	return g
+	user := &Client{}
+	user.InitializeClient()
+	return user
 }
 
 func (user *Client) InitializeClient() error {
@@ -91,7 +90,6 @@ func (users *Client) Greeting() {
 	fmt.Println()
 }
 
-
 func (g *Client) GetInbox() (models.MessageCollectionResponseable, error) {
 	var topValue int32 = 25
 	query := messages.MessagesRequestBuilderGetQueryParameters{
@@ -118,7 +116,6 @@ func (Client *Client) ListInbox() {
 	if err != nil {
 		log.Panicf("Error getting user's inbox: %v", err)
 	}
-
 	location, err := time.LoadLocation("Local")
 	if err != nil {
 		log.Panicf("Error getting local timezone: %v", err)
@@ -147,34 +144,9 @@ func (Client *Client) ListInbox() {
 	fmt.Println()
 }
 
-func (g *Client) SendMail(subject *string, body *string, recipient *string) error {
-	// Create a new message
-	message := models.NewMessage()
-	message.SetSubject(subject)
-
-	messageBody := models.NewItemBody()
-	messageBody.SetContent(body)
-	contentType := models.TEXT_BODYTYPE
-	messageBody.SetContentType(&contentType)
-	message.SetBody(messageBody)
-
-	toRecipient := models.NewRecipient()
-	emailAddress := models.NewEmailAddress()
-	emailAddress.SetAddress(recipient)
-	toRecipient.SetEmailAddress(emailAddress)
-	message.SetToRecipients([]models.Recipientable{
-		toRecipient,
-	})
-
-	sendMailBody := sendmail.NewSendMailRequestBody()
-	sendMailBody.SetMessage(message)
-
-	// Send the message
-	return g.userClient.Me().SendMail().Post(sendMailBody)
-}
-
-func (Client *Client) SendMail2() {
-	user, err := Client.GetUser()
+func (client *Client) SendMail(title *string, contents *string, address *string) {
+	// Get the user for their email address
+	user, err := client.GetUser()
 	if err != nil {
 		log.Panicf("Error getting user: %v", err)
 	}
@@ -184,16 +156,40 @@ func (Client *Client) SendMail2() {
 		email = user.GetUserPrincipalName()
 	}
 
-	subject := "Testing Microsoft Graph"
-	body := "Hello world!"
-	err = Client.SendMail(&subject, &body, email)
-	if err != nil {
-		log.Panicf("Error sending mail: %v", err)
-	}
+
+	
+	client.SendMailHelper(title, contents, address)
 
 	fmt.Println("Mail sent.")
 	fmt.Println()
 }
+
+func (user *Client) SendMailHelper(title *string, contents *string, address *string) error {
+	// Create a new message
+	message := models.NewMessage()
+	message.SetSubject(title)
+
+	messageBody := models.NewItemBody()
+	messageBody.SetContent(contents)
+	contentType := models.TEXT_BODYTYPE
+	messageBody.SetContentType(&contentType)
+	message.SetBody(messageBody)
+
+	toRecipient := models.NewRecipient()
+	emailAddress := models.NewEmailAddress()
+	emailAddress.SetAddress(address)
+	toRecipient.SetEmailAddress(emailAddress)
+	message.SetToRecipients([]models.Recipientable{
+		toRecipient,
+	})
+
+	sendMailBody := sendmail.NewSendMailRequestBody()
+	sendMailBody.SetMessage(message)
+
+	// Send the message
+	return user.userClient.Me().SendMail().Post(sendMailBody)
+}
+
 
 func (g *Client) EnsureGraphForAppOnlyAuth() error {
 	if g.clientSecretCredential == nil {
@@ -208,7 +204,7 @@ func (g *Client) EnsureGraphForAppOnlyAuth() error {
 		g.clientSecretCredential = credential
 	}
 
-	if g.appClient == nil {
+	if g.userClient == nil {
 		// Create an auth provider using the credential
 		authProvider, err := auth.NewAzureIdentityAuthenticationProviderWithScopes(g.clientSecretCredential, []string{
 			"https://graph.microsoft.com/.default",
@@ -222,7 +218,7 @@ func (g *Client) EnsureGraphForAppOnlyAuth() error {
 
 		// Create a Graph client using request adapter
 		client := msgraphsdk.NewGraphServiceClient(adapter)
-		g.appClient = client
+		g.userClient = client
 	}
 
 	return nil

@@ -2,27 +2,26 @@ package main
 
 import (
 	"fmt"
-	"graphtutorial/client"
 	"log"
 	"github.com/joho/godotenv"
+	"graphtesting/client"
 )
 
 func main() {
 	fmt.Println("Go Mail Experimental Program")
 	fmt.Println()
+	log.Println("Go Mail")
 
-	godotenv.Load(".env.local")
+
+	godotenv.Load("env")
 	err := godotenv.Load()
-
-	if err != nil {
-		log.Fatal("Error, Check .env file.")
-	}
 
 	Client := client.NewClient()
 	Client.Greeting()
 
 	var choice int64 = -1
 
+	
 	for {
 		fmt.Println("Enter one of the following options:")
 		fmt.Println("1. Display access token")
@@ -44,15 +43,37 @@ func main() {
 			Client.DisplayAccessToken()
 		case 2:
 			// List emails from user's inbox
-			Client.ListInbox()
+			fmt.Println("Entering Email Sender...")
 		case 3:
 			// Send an email message
-			Client.SendMail2()
+			MailSender(Client)
 		default:
 			fmt.Println("Invalid choice! Please try again.")
 		}
+		if choice == 2 {
+			MailSender(Client)
+		}
+
 		if choice == 0 {
 			break
 		}
 	}
+
+}
+
+
+func MailSender(Client *client.Client){
+	subject := ""
+	address := ""
+	body := ""
+
+	fmt.Println("Enter Recipient Email Address:")
+	fmt.Scanf("%s", address)
+	
+	fmt.Println("Enter Subject:")
+	fmt.Scanf("%s", subject)
+
+	fmt.Println("Enter Recipient Email Address")
+	fmt.Scanf("%s", body)
+	Client.SendMail(&subject, &body, &address)
 }

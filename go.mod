@@ -1,4 +1,4 @@
-module graphtutorial
+module graphtesting
 
 go 1.18
 
